@@ -22,7 +22,6 @@ def LatestPoints():
     if XYZ[3] == 1:
         time.sleep(0.00000000000000000000000000000001)
     else:
-        # XYZ.clear()
         XYZ[3] = 1
         x = 0
         return x
@@ -41,6 +40,7 @@ def SendPoint(scf):
     cf = scf.cf
     # skal være her for at unlocke setpoint
     cf.commander.send_setpoint(0, 0, 0, 0)
+    #initalisere værdier for regutarorer
     EK2 = 0
     EK1 = 0
     thrustk1 = 0
@@ -59,30 +59,30 @@ def SendPoint(scf):
 
     while(True):
         if x == 0:
-            ref = threading.Thread(target=GetPoint).start()
+            ref = threading.Thread(target=GetPoint).start() #starter thread der tager input fra brugeren
             x = x+1
         x = LatestPoints()
-        pos, rot = Vicon_stream.getData()
-        #print(pos)
-        # yaw = 0-rot[2] #tester yaw
+
+        pos, rot = Vicon_stream.getData() # henter data fra vicon
+
         thrust, EK1, EK2, thrustk1 = ZPID.PID(
-            XYZ[2], pos[2]/1000, EK1, EK2, thrustk1)  # Det her virker
+            XYZ[2], pos[2]/1000, EK1, EK2, thrustk1)  # Z regulator
         roll, RK1, RK2, rollK1 = XYPID.PID(
-            XYZ[0], pos[0]/1000, RK1, RK2, rollK1)  # Det her virker
+            XYZ[0], pos[0]/1000, RK1, RK2, rollK1)  # X regulator
         pitch, PK1, PK2, pitchK1 = XYPID.PID(
-            XYZ[1], pos[1]/1000, PK1, PK2, pitchK1)  # Det her virker
+            XYZ[1], pos[1]/1000, PK1, PK2, pitchK1)  # Y Regulator
         
         # omdanner thrust til PWM sigal
         pwm = (4355.400697+1.161*10**6*(thrust)/9.82)
+
+        # If statements der begrænser max PWM og sættes negative PWM værdier til 0
         if pwm > 50000:
             pwm = 50000
         if pwm < 0:
             pwm = 0
     
-        print("roll: ",roll)
-        print("pitch ", pitch)
         cf.commander.send_setpoint(roll,pitch,yaw,abs(round(pwm))) #Sender PWM til dronen
-        #cf.commander.send_setpoint(0, 0, 0, abs(round(pwm)))
+
 
 
 if __name__ == '__main__':
